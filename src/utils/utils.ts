@@ -1,6 +1,6 @@
 export function formatEur(amount: number): string {
   const sign = amount < 0 ? "-" : "";
-  return `${sign}€${Math.abs(amount).toLocaleString("nl-BE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sign}€${Math.abs(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatDate(dateStr: string): string {

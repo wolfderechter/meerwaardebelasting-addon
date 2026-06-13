@@ -1,3 +1,4 @@
+import { FOTOMOMENT_DATE, BASE_CURRENCY, TAX_RATE, ANNUAL_EXEMPTION } from './constants';
 import type {
   NormalizedActivity,
   ExchangeRateEntry,
@@ -7,11 +8,6 @@ import type {
   TaxCalculationResult,
   FotomomentPrices,
 } from './types';
-
-const FOTOMOMENT_DATE = '2025-12-31';
-const TAX_RATE = 0.10;
-const ANNUAL_EXEMPTION = 10_000;
-const BASE_CURRENCY = 'EUR';
 
 function parseDate(dateStr: string): number {
   return new Date(dateStr).getTime();

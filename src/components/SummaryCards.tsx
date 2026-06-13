@@ -1,4 +1,5 @@
 import { formatEur } from "../utils/utils";
+import { ANNUAL_EXEMPTION } from '../utils/constants';
 
 interface SummaryCardsProps {
   taxOwed: number;
@@ -36,7 +37,7 @@ export function SummaryCards({
           {formatEur(exemptionRemaining)}
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          Total exemption {year}: €10,000
+          Total exemption {year}: {formatEur(ANNUAL_EXEMPTION)}
         </p>
       </div>
     </div>
