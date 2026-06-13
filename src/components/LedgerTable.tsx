@@ -21,7 +21,7 @@ function formatDate(dateStr: string): string {
 }
 
 function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) {
-  const header = 'Investment;Purchase date;Original price;Snapshot price;Sell price;Sell date;Quantity;Gain;Tax\n';
+  const header = 'Asset;Acquired;Original price;Snapshot price;Sell price;Sold;Qty;Gain / Loss;Tax owed\n';
   const rows = gains
     .filter((g) => g.gainEur !== 0)
     .map((g) => {
@@ -77,15 +77,15 @@ export function LedgerTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left font-medium p-3">Investment</th>
-              <th className="text-left font-medium p-3">Purchase date</th>
-              <th className="text-right font-medium p-3">Buy price</th>
+              <th className="text-left font-medium p-3">Asset</th>
+              <th className="text-left font-medium p-3">Acquired</th>
+              <th className="text-right font-medium p-3">Original price</th>
               <th className="text-right font-medium p-3">Snapshot price</th>
               <th className="text-right font-medium p-3">Sell price</th>
-              <th className="text-left font-medium p-3">Sell date</th>
-              <th className="text-right font-medium p-3">Amount</th>
-              <th className="text-right font-medium p-3">Gain</th>
-              <th className="text-right font-medium p-3">Tax</th>
+              <th className="text-left font-medium p-3">Sold</th>
+              <th className="text-right font-medium p-3">Qty</th>
+              <th className="text-right font-medium p-3">Gain / Loss</th>
+              <th className="text-right font-medium p-3">Tax owed</th>
             </tr>
           </thead>
           <tbody>
@@ -98,7 +98,6 @@ export function LedgerTable({
             ) : (
               realizedGains.map((gain) => {
                 const isGain = gain.gainEur >= 0;
-                const asterisk = gain.usesFotomoment ? ' *' : '';
                 const hasFotomoment = gain.originalUnitPriceEur != null && gain.fotomomentUnitPriceEur != null;
                 const isOrigUsed = hasFotomoment && gain.originalUnitPriceEur! >= gain.fotomomentUnitPriceEur!;
                 return (
@@ -115,7 +114,7 @@ export function LedgerTable({
                       </div>
                     </td>
                     <td className="p-3 text-muted-foreground text-xs">
-                      {formatDate(gain.purchaseDate)}{asterisk}
+                      {formatDate(gain.purchaseDate)}
                     </td>
                     <td className={`p-3 text-right text-xs ${hasFotomoment ? (isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
                       {gain.originalUnitPriceEur != null ? formatEur(gain.originalUnitPriceEur) : '-'}
@@ -177,7 +176,7 @@ export function LedgerTable({
                 <td className="p-3 text-right">-</td>
               </tr>
               <tr className="border-t-2 border-gray-300 font-bold text-sm bg-muted/20">
-                <td colSpan={7} className="p-3 text-right">Capital gains tax payable (10%)</td>
+                <td colSpan={7} className="p-3 text-right">Capital gains tax owed (10%)</td>
                 <td className="p-3 text-right" />
                 <td className="p-3 text-right text-red-600 text-base">
                   {formatEur(summary.belastingVerschuldigd)}

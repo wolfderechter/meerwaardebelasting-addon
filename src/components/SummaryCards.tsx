@@ -22,7 +22,7 @@ export function SummaryCards({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
       <div className="rounded-lg border bg-card p-6 shadow-sm">
         <p className="text-sm font-medium text-muted-foreground mb-1">
-          Capital gains tax payable in {year}
+          Capital gains tax owed for {year}
         </p>
         <p className="text-3xl font-bold text-red-600">
           {formatEur(taxPayable)}
