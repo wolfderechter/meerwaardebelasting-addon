@@ -11,6 +11,8 @@ interface MeerwaardePageProps {
 
 export function MeerwaardePage({ ctx }: MeerwaardePageProps) {
   const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let y = 2026; y <= currentYear; y++) years.push(y);
   const [taxYear, setTaxYear] = useState(currentYear);
   const [started, setStarted] = useState(false);
 
@@ -35,7 +37,7 @@ export function MeerwaardePage({ ctx }: MeerwaardePageProps) {
             className="rounded-md border px-3 py-1.5 text-sm bg-background"
             disabled={loading}
           >
-            {[2026, 2027, 2028, 2029, 2030].map((y) => (
+            {years.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
