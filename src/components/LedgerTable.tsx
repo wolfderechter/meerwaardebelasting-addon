@@ -144,7 +144,7 @@ export function LedgerTable({
             )}
           </tbody>
           {hasGains && (
-            <tfoot>
+            <tfoot className="whitespace-nowrap">
               <tr className="border-t-2 border-gray-300 font-semibold text-sm">
                 <td colSpan={7} className="p-3 text-right">Total Gains</td>
                 <td className="p-3 text-right text-green-600">
