@@ -1,0 +1,41 @@
+{
+  "id": "belgian-capital-gains-tax",
+  "name": "Meerwaardebelasting",
+  "version": "1.0.0",
+  "description": "Bereken en track uw Belgische meerwaardebelasting (2026+) volgens de FIFO-methode per rekening.",
+  "author": "Capital Gains V2",
+  "homepage": "",
+  "license": "MIT",
+  "main": "dist/addon.js",
+  "sdkVersion": "3.3.0",
+  "minWealthfolioVersion": "1.0.0",
+  "enabled": true,
+  "keywords": ["belasting", "capital gains", "meerwaarde", "belgie", "tax", "fifo"],
+  "permissions": [
+    {
+      "category": "accounts",
+      "functions": ["getAll"],
+      "purpose": "Accounts ophalen om per-rekening FIFO-tracking toe te passen"
+    },
+    {
+      "category": "activities",
+      "functions": ["getAll", "search"],
+      "purpose": "Aan- en verkooptransacties ophalen voor meerwaardeberekening"
+    },
+    {
+      "category": "quotes",
+      "functions": ["getHistory"],
+      "purpose": "Slotkoers 31 december 2025 ophalen (fotomoment)"
+    },
+    {
+      "category": "exchange-rates",
+      "functions": ["getAll"],
+      "purpose": "Historische wisselkoersen raadplegen voor EUR-conversie"
+    },
+    {
+      "category": "ui",
+      "functions": ["sidebar.addItem", "router.add"],
+      "purpose": "Navigatie-item en route registreren in de sidebar"
+    }
+  ]
+}
