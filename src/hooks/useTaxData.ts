@@ -6,33 +6,7 @@ import type {
   TaxDataState,
   FotomomentPrices,
 } from '../utils/types';
-import { calculateTax, fetchFotomomentPrices } from '../utils/fifoEngine';
-
-function deepUnwrap(raw: unknown): any[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw !== 'object' || raw === null) return [];
-
-  const seen = new Set<unknown>();
-  const stack: unknown[] = [raw];
-
-  while (stack.length > 0) {
-    const current = stack.pop()!;
-    if (seen.has(current)) continue;
-    seen.add(current);
-
-    if (Array.isArray(current)) return current;
-
-    if (typeof current === 'object' && current !== null) {
-      for (const val of Object.values(current as Record<string, unknown>)) {
-        if (Array.isArray(val)) return val;
-        if (typeof val === 'object' && val !== null) stack.push(val);
-      }
-    }
-  }
-
-  return [];
-}
+import { calculateTax, fetchFotomomentPrices, unwrapArray } from '../utils/fifoEngine';
 
 function toNum(val: unknown): number {
   if (val == null || val === '') return 0;
@@ -41,65 +15,40 @@ function toNum(val: unknown): number {
 }
 
 function resolveSymbol(a: any): string {
-  const id = a.assetId ?? '';
-  const idIsTicker = id.length > 0 && id.length < 20 && /^[A-Za-z0-9.:]+$/.test(id);
-
-  const symbol =
-    a.assetSymbol ??
-    a.symbol ??
-    a.ticker ??
-    (idIsTicker ? id : null) ??
-    a.asset?.symbol ??
-    a.asset?.ticker ??
-    a.asset?.asset?.symbol ??
-    a.assetData?.symbol ??
-    '';
-  if (symbol) return symbol.toUpperCase();
-
-  const name = (a.assetName ?? a.name ?? a.description ?? '').trim();
-  const firstWord = name.split(/[\s,./]+/)[0] ?? '';
-  return firstWord.toUpperCase();
+  return (a.assetSymbol ?? a.assetId ?? a.symbol ?? '').toUpperCase();
 }
 
 function normalizeActivities(raw: unknown): NormalizedActivity[] {
-  const list = deepUnwrap(raw);
+  const list = unwrapArray(raw);
 
   return list.map((a: any) => {
-    const rawType = (a.activityType ?? a.type ?? '').toUpperCase();
-    const rawQty = toNum(a.quantity ?? a.shares ?? a.filled ?? a.executedQuantity);
-    const rawUnitPrice = toNum(a.unitPrice ?? a.price ?? a.costPerShare);
-    const rawTotal = toNum(a.totalPrice ?? a.amount ?? a.total) || (rawQty * rawUnitPrice);
+    const rawType = String(a.activityType ?? '').toUpperCase();
+    const rawQty = toNum(a.quantity);
+    const rawUnitPrice = toNum(a.unitPrice);
+    if(a.assetSymbol === 'AMD') {
+      console.log('CHECKING AMD', { a, rawType, rawQty, rawUnitPrice });
+    }
+    const rawTotal = toNum(a.amount) || (rawQty * rawUnitPrice);
+    const rawDate = a.date instanceof Date ? a.date.toISOString() : String(a.date ?? '');
 
     return {
-      id: a.id ?? '',
-      accountId: a.accountId ?? '',
-      accountName: a.accountName ?? '',
+      id: String(a.id ?? ''),
+      accountId: String(a.accountId ?? ''),
+      accountName: String(a.accountName ?? ''),
       symbol: resolveSymbol(a),
-      assetName: a.assetName ?? a.name ?? a.description ?? a.asset?.name ?? (a.symbol ?? ''),
+      assetId: String(a.assetId ?? ''),
+      assetName: String(a.assetName ?? ''),
       activityType: rawType as NormalizedActivity['activityType'],
       quantity: rawQty,
       unitPrice: rawUnitPrice,
       totalPrice: rawTotal,
-      currency: a.currency ?? 'EUR',
-      date: a.date instanceof Date ? a.date.toISOString() : (a.date ?? a.dateTime ?? a.transactionDate ?? ''),
-      fee: toNum(a.fee ?? a.commission ?? a.brokerFee) || undefined,
-      tax: toNum(a.tax) || undefined,
+      currency: String(a.currency ?? 'EUR'),
+      date: rawDate,
     };
   }).filter(
     (a) => a.activityType === 'BUY' || a.activityType === 'SELL' ||
           a.activityType === 'ADD_HOLDING' || a.activityType === 'TRANSFER_IN'
   );
-}
-
-function normalizeRates(raw: unknown): any[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'object' && raw !== null) {
-    const obj = raw as Record<string, unknown>;
-    if (Array.isArray(obj.data)) return obj.data;
-    if (Array.isArray(obj.rates)) return obj.rates;
-  }
-  return [];
 }
 
 export function useTaxData(
@@ -134,7 +83,7 @@ export function useTaxData(
       if (abortRef.current) return;
 
       const accounts = Array.isArray(accountsRaw) ? accountsRaw : [];
-      const rawList = deepUnwrap(activitiesRaw);
+      const rawList = unwrapArray(activitiesRaw);
       if (rawList.length > 0) {
         const first = rawList[0];
         const keys = Object.keys(first).join(', ');
@@ -142,7 +91,14 @@ export function useTaxData(
         ctx.api.logger.debug(`Eerste activiteit: assetSymbol=${JSON.stringify(first.assetSymbol)}, symbol=${JSON.stringify(first.symbol)}, ticker=${JSON.stringify(first.ticker)}, assetName=${JSON.stringify(first.assetName)}, activityType=${JSON.stringify(first.activityType)}, quantity=${JSON.stringify(first.quantity)}`);
       }
       const activities = normalizeActivities(activitiesRaw);
-      const rates = normalizeRates(ratesRaw);
+      const rates = unwrapArray(ratesRaw);
+      if (rates.length > 0) {
+        const first = rates[0];
+        ctx.api.logger.debug(`Eerste rate velden: ${Object.keys(first).join(', ')}`);
+        ctx.api.logger.debug(`Eerste rate: ${JSON.stringify(first)}`);
+      } else {
+        ctx.api.logger.warn('GEEN exchange rates gevonden!');
+      }
 
       const buyCount = activities.filter(a => a.activityType === 'BUY' || a.activityType === 'ADD_HOLDING' || a.activityType === 'TRANSFER_IN').length;
       const sellCount = activities.filter(a => a.activityType === 'SELL').length;
@@ -166,21 +122,28 @@ export function useTaxData(
       }));
 
       const pre2026Symbols = new Set<string>();
+      const symbolToAssetId = new Map<string, string>();
       for (const a of enriched) {
         if (a.activityType === 'BUY' || a.activityType === 'ADD_HOLDING' || a.activityType === 'TRANSFER_IN') {
           const buyDate = new Date(a.date);
           if (buyDate < new Date('2026-01-01')) {
             pre2026Symbols.add(a.symbol);
+            if (a.assetId && !symbolToAssetId.has(a.symbol)) {
+              symbolToAssetId.set(a.symbol, a.assetId);
+            }
           }
         }
       }
-
+      if (symbolToAssetId.size > 0) {
+        ctx.api.logger.info(`Voorbeeld: symbol=AMD → assetId=${symbolToAssetId.get('AMD') || 'NIET GEVONDEN'}`);
+      }
       let fotomomentPrices: FotomomentPrices = {};
       if (pre2026Symbols.size > 0) {
         ctx.api.logger.info(`Fotomoment prijzen ophalen voor ${pre2026Symbols.size} symbolen`);
         fotomomentPrices = await fetchFotomomentPrices(
           [...pre2026Symbols],
-          (symbol: string) => ctx.api.quotes.getHistory(symbol),
+          symbolToAssetId,
+          (assetId: string) => ctx.api.quotes.getHistory(assetId),
           (msg: string) => ctx.api.logger.debug(msg)
         );
         const foundSymbols = Object.keys(fotomomentPrices);
@@ -188,6 +151,11 @@ export function useTaxData(
       }
 
       if (abortRef.current) return;
+
+      const sells = enriched.filter(a => a.activityType === 'SELL');
+      for (const s of sells) {
+        ctx.api.logger.debug(`VERKOOP: symbol=${s.symbol}, qty=${s.quantity}, unitPrice=${s.unitPrice}, totalPrice=${s.totalPrice}, currency=${s.currency}, date=${s.date}`);
+      }
 
       ctx.api.logger.info(`FIFO engine starten: ${enriched.length} activiteiten`);
 

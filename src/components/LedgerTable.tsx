@@ -77,15 +77,15 @@ export function LedgerTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left font-medium p-3">Belegging</th>
-              <th className="text-left font-medium p-3">Aankoopdatum</th>
-              <th className="text-right font-medium p-3">Orig. prijs</th>
-              <th className="text-right font-medium p-3">Foto prijs</th>
-              <th className="text-right font-medium p-3">Verkoopprijs</th>
-              <th className="text-left font-medium p-3">Verkoopdatum</th>
-              <th className="text-right font-medium p-3">Aantal</th>
-              <th className="text-right font-medium p-3">Meerwaarde</th>
-              <th className="text-right font-medium p-3">Belasting</th>
+              <th className="text-left font-medium p-3">Investment</th>
+              <th className="text-left font-medium p-3">Purchase date</th>
+              <th className="text-right font-medium p-3">Buy price</th>
+              <th className="text-right font-medium p-3">Snapshot price</th>
+              <th className="text-right font-medium p-3">Sell price</th>
+              <th className="text-left font-medium p-3">Sell date</th>
+              <th className="text-right font-medium p-3">Amount</th>
+              <th className="text-right font-medium p-3">Gain</th>
+              <th className="text-right font-medium p-3">Tax</th>
             </tr>
           </thead>
           <tbody>

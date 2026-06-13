@@ -3,6 +3,7 @@ export interface NormalizedActivity {
   accountId: string;
   accountName: string;
   symbol: string;
+  assetId: string;
   assetName: string;
   activityType: 'BUY' | 'SELL' | 'ADD_HOLDING' | 'TRANSFER_IN';
   quantity: number;
@@ -10,8 +11,6 @@ export interface NormalizedActivity {
   totalPrice: number;
   currency: string;
   date: string;
-  fee?: number;
-  tax?: number;
 }
 
 export interface ExchangeRateEntry {

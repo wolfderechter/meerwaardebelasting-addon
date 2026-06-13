@@ -20,7 +20,7 @@ export function MeerwaardePage({ ctx }: MeerwaardePageProps) {
   );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Meerwaardebelasting</h1>

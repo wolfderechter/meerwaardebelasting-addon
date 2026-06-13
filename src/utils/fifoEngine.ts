@@ -25,10 +25,11 @@ function isPreFotomoment(dateStr: string): boolean {
   return parseDate(dateStr) < parseDate(FOTOMOMENT_DATE);
 }
 
-function unwrapArray(raw: unknown): any[] {
+export function unwrapArray(raw: unknown): any[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
   if (typeof raw !== 'object' || raw === null) return [];
+
   const obj = raw as Record<string, unknown>;
   for (const key of ['data', 'results', 'quotes', 'history', 'items', 'prices']) {
     const val = obj[key];
@@ -37,20 +38,11 @@ function unwrapArray(raw: unknown): any[] {
   return [];
 }
 
-function normalizeArray<T>(data: T[] | { data?: T[] } | undefined | null): T[] {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
-    return data.data as T[];
-  }
-  return unwrapArray(data) as T[];
-}
-
 export function buildExchangeRateMap(
   rawRates: unknown
 ): Map<string, Map<string, Map<string, number>>> {
   const map = new Map<string, Map<string, Map<string, number>>>();
-  const rates = normalizeArray(rawRates as any);
+  const rates = unwrapArray(rawRates);
 
   for (const r of rates) {
     const entry = r as ExchangeRateEntry;
@@ -59,12 +51,16 @@ export function buildExchangeRateMap(
 
     const from = entry.fromCurrency.toUpperCase();
     const to = entry.toCurrency.toUpperCase();
-    const date = entry.date?.substring(0, 10);
+    const rawEntry = r as any;
+    const date = rawEntry.timestamp?.substring(0, 10) || entry.date?.substring(0, 10);
+    if (!date) continue;
+    const rate = typeof entry.rate === 'string' ? parseFloat(entry.rate) : entry.rate;
+    if (isNaN(rate)) continue;
 
     if (!map.has(from)) map.set(from, new Map());
     const toMap = map.get(from)!;
     if (!toMap.has(to)) toMap.set(to, new Map());
-    toMap.get(to)!.set(date, entry.rate);
+    toMap.get(to)!.set(date, rate);
   }
 
   return map;
@@ -133,44 +129,49 @@ function findClosestRate(map: Map<string, number>, dateKey: string): number | nu
 
 export async function fetchFotomomentPrices(
   symbols: string[],
-  getHistory: (symbol: string) => Promise<unknown>,
+  symbolToAssetId: Map<string, string>,
+  getHistory: (assetId: string) => Promise<unknown>,
   logInfo?: (msg: string) => void
 ): Promise<FotomomentPrices> {
   const prices: FotomomentPrices = {};
   const uniqueSymbols = [...new Set(symbols)];
 
   for (const symbol of uniqueSymbols) {
+    const assetId = symbolToAssetId.get(symbol) || symbol;
     try {
-      const historyRaw = await getHistory(symbol);
+      const historyRaw = await getHistory(assetId);
       const quotes = unwrapArray(historyRaw);
 
       if (quotes.length === 0) {
-        logInfo?.(`${symbol}: Geen quotes gevonden`);
+        logInfo?.(`${symbol} (assetId=${assetId}): Geen quotes gevonden`);
         continue;
       }
 
-      const firstDate = quotes.length > 0 ? (quotes[0].date || quotes[0].dateTime || '').substring(0, 10) : '-';
-      const lastDate = quotes.length > 0 ? (quotes[quotes.length - 1].date || quotes[quotes.length - 1].dateTime || '').substring(0, 10) : '-';
-      logInfo?.(`${symbol}: ${quotes.length} quotes (${firstDate} - ${lastDate})`);
+      const firstQuote = quotes[0];
+      const firstDate = (firstQuote.timestamp || firstQuote.date || firstQuote.dateTime || '').substring(0, 10);
+      const lastDate = (quotes[quotes.length - 1].timestamp || quotes[quotes.length - 1].date || quotes[quotes.length - 1].dateTime || '').substring(0, 10);
+      logInfo?.(`${symbol} (assetId=${assetId}): ${quotes.length} quotes (${firstDate} - ${lastDate})`);
 
       const fotomomentQuote = quotes.find((q: any) => {
-        const qDate = (q.date || q.dateTime || q.timestamp || q.datetime || '').substring(0, 10);
+        const qDate = (q.timestamp || q.date || q.dateTime || q.datetime || '').substring(0, 10);
         return qDate === FOTOMOMENT_DATE;
       });
 
       if (fotomomentQuote) {
-        const price = fotomomentQuote.price ?? fotomomentQuote.close ?? fotomomentQuote.adjClose ?? fotomomentQuote.adjustedClose;
+        const price = fotomomentQuote.close ?? fotomomentQuote.adjclose ?? fotomomentQuote.price ?? fotomomentQuote.adjClose;
         if (price != null) {
           prices[symbol] = price;
           logInfo?.(`${symbol}: Fotoprijs gevonden = ${price}`);
+        } else {
+          logInfo?.(`${symbol}: Fotoprijs quote gevonden maar close/adjclose is null`);
         }
       } else {
         logInfo?.(`${symbol}: Geen quote voor ${FOTOMOMENT_DATE}`);
         const lastQ = quotes[quotes.length - 1];
         if (lastQ) {
-          const lDate = (lastQ.date || lastQ.dateTime || '').substring(0, 10);
+          const lDate = (lastQ.timestamp || lastQ.date || lastQ.dateTime || '').substring(0, 10);
           if (lDate < FOTOMOMENT_DATE) {
-            const price = lastQ.price ?? lastQ.close ?? lastQ.adjClose ?? lastQ.adjustedClose;
+            const price = lastQ.close ?? lastQ.adjclose ?? lastQ.price ?? lastQ.adjClose;
             if (price != null) {
               prices[symbol] = price;
               logInfo?.(`${symbol}: Laatste beschikbare prijs gebruikt (${lDate}): ${price}`);
@@ -179,7 +180,7 @@ export async function fetchFotomomentPrices(
         }
       }
     } catch (e: any) {
-      logInfo?.(`${symbol}: Fout bij ophalen: ${e?.message ?? e}`);
+      logInfo?.(`${symbol} (assetId=${assetId}): Fout bij ophalen: ${e?.message ?? e}`);
       continue;
     }
   }
@@ -232,13 +233,10 @@ export function runFifoEngine(
     fotomomentPrices: FotomomentPrices
   ): TaxLot {
     const isPre2026 = isPreFotomoment(buy.date);
-    const rawFee = buy.fee ?? 0;
 
     const rawTotalCost = buy.totalPrice || (buy.quantity * buy.unitPrice);
-    const totalExFees = convertToEur(rawTotalCost, buy.currency, rateMap, buy.date);
-    const feeEur = convertToEur(rawFee, buy.currency, rateMap, buy.date);
-    const costExFees = totalExFees - feeEur;
-    const unitCostExFees = buy.quantity > 0 ? costExFees / buy.quantity : 0;
+    const totalEur = convertToEur(rawTotalCost, buy.currency, rateMap, buy.date);
+    const unitCost = buy.quantity > 0 ? totalEur / buy.quantity : 0;
 
     const rawUnitPriceEur = convertToEur(buy.unitPrice, buy.currency, rateMap, buy.date);
 
@@ -272,8 +270,8 @@ export function runFifoEngine(
       purchaseDate: buy.date,
       quantityPurchased: buy.quantity,
       quantityRemaining: buy.quantity,
-      unitCostEur: unitCostExFees,
-      totalCostEur: costExFees,
+      unitCostEur: unitCost,
+      totalCostEur: totalEur,
       usesFotomoment: false,
       originalUnitCostEur: rawUnitPriceEur,
       fotomomentPriceEur: undefined,
@@ -306,14 +304,12 @@ export function runFifoEngine(
       if (!accountNames[sell.accountId]) accountNames[sell.accountId] = sell.accountName;
       const sellYear = getYear(sell.date);
       const isCurrentYear = sellYear === taxYear;
+      const matchingLots = lots.filter((l) => l.symbol === sell.symbol && l.quantityRemaining > 0);
+      console.log(`[FIFO] account=${accountId}, date=${sell.date}, year=${sellYear}, isCurrentYear=${isCurrentYear}, symbol=${sell.symbol}, qty=${sell.quantity}, totalPrice=${sell.totalPrice}, matchingLots=${matchingLots.length}, totalLots=${lots.length}, totalBuys=${accountBuys.length}`);
 
       let remainingSellQty = sell.quantity;
-      const rawProceeds = sell.totalPrice;
-      const rawSellFee = sell.fee ?? 0;
-      const proceedsExFees = convertToEur(rawProceeds, sell.currency, rateMap, sell.date);
-      const sellFeeEur = convertToEur(rawSellFee, sell.currency, rateMap, sell.date);
-      const proceedsNet = proceedsExFees - sellFeeEur;
-      const sellUnitProceed = remainingSellQty > 0 ? proceedsNet / remainingSellQty : 0;
+      const proceedsEur = convertToEur(sell.totalPrice, sell.currency, rateMap, sell.date);
+      const sellUnitPrice = remainingSellQty > 0 ? proceedsEur / remainingSellQty : 0;
 
       const sellLots = lots.filter((l) => l.symbol === sell.symbol && l.quantityRemaining > 0);
 
@@ -321,7 +317,7 @@ export function runFifoEngine(
         if (remainingSellQty <= 0) break;
 
         const matchQty = Math.min(remainingSellQty, lot.quantityRemaining);
-        const matchProceeds = sellUnitProceed * matchQty;
+        const matchProceeds = sellUnitPrice * matchQty;
         const fotomomentCost = lot.unitCostEur * matchQty;
         const originalCost = (lot.originalUnitCostEur ?? lot.unitCostEur) * matchQty;
         const { costBasisEur, gainEur, adjusted } = computeGainFotomoment(
@@ -356,7 +352,7 @@ export function runFifoEngine(
             fotomomentAdjusted: adjusted,
             originalUnitPriceEur: origPrice ?? undefined,
             fotomomentUnitPriceEur: fotoPrice ?? undefined,
-            sellUnitPriceEur: sellUnitProceed,
+            sellUnitPriceEur: sellUnitPrice,
           });
         }
 
@@ -365,7 +361,7 @@ export function runFifoEngine(
       }
 
       if (remainingSellQty > 0.0001 && isCurrentYear) {
-        const uncoveredProceeds = sellUnitProceed * remainingSellQty;
+        const uncoveredProceeds = sellUnitPrice * remainingSellQty;
         allRealizedGains.push({
           id: `gain-uncovered-${sell.id}`,
           sellActivityId: sell.id,
@@ -383,20 +379,16 @@ export function runFifoEngine(
           taxLiabilityEur: uncoveredProceeds * TAX_RATE,
           usesFotomoment: false,
           fotomomentAdjusted: false,
-          sellUnitPriceEur: sellUnitProceed,
+          sellUnitPriceEur: sellUnitPrice,
         });
       }
     }
   }
 
-  const yearGains = allRealizedGains.filter(
-    (g) => getYear(g.sellDate) === taxYear
-  );
-
   let totalMeerwaarde = 0;
   let totalVerlies = 0;
 
-  for (const g of yearGains) {
+  for (const g of allRealizedGains) {
     if (g.gainEur >= 0) totalMeerwaarde += g.gainEur;
     else totalVerlies += Math.abs(g.gainEur);
   }
@@ -419,7 +411,7 @@ export function runFifoEngine(
 
   return {
     year: taxYear,
-    realizedGains: yearGains,
+    realizedGains: allRealizedGains,
     summary,
     exemptionRemaining: Math.max(0, ANNUAL_EXEMPTION - vrijstellingGebruikt),
     accountNames,
