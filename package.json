@@ -1,15 +1,14 @@
 {
   "name": "meerwaardebelasting-addon",
   "version": "1.0.0",
-  "description": "Bereken en track uw Belgische meerwaardebelasting (2026+) via FIFO per rekening.",
+  "description": "A wealthfolio addon to track the meerwaardebelasting for Belgium",
   "type": "module",
   "main": "dist/addon.js",
-  "author": "Capital Gains V2",
+  "author": "wolfderechteer",
   "license": "MIT",
-  "homepage": "",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/wolfderechter/meerwaardebelasting-addon"
   },
   "keywords": [
     "wealthfolio",
