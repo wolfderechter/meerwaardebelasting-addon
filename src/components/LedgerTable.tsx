@@ -32,7 +32,7 @@ function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) 
     })
     .join('\n');
 
-  const summaryRows = `\n\nTotal gain;;;;;;${summary.totalMeerwaarde.toFixed(2)};\nExemption;;;;;;${summary.vrijstellingGebruikt.toFixed(2)};\nTaxable gain;;;;;;${summary.belastbareMeerwaarde.toFixed(2)};\nTax payable (10%);;;;;;${summary.belastingVerschuldigd.toFixed(2)};`;
+  const summaryRows = `\n\nTotal Gains;;;;;;${summary.totalMeerwaarde.toFixed(2)};\nTotal Losses;;;;;;${(-summary.totalVerlies).toFixed(2)};\nNet Gain;;;;;;${(summary.totalMeerwaarde - summary.totalVerlies).toFixed(2)};\nAnnual Exemption;;;;;;${(-summary.vrijstellingGebruikt).toFixed(2)};\nTaxable Gain;;;;;;${summary.belastbareMeerwaarde.toFixed(2)};\nCapital Gains Tax Owed (10%);;;;;;${summary.belastingVerschuldigd.toFixed(2)};`;
 
   const blob = new Blob(['\uFEFF' + header + rows + summaryRows], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -50,6 +50,7 @@ export function LedgerTable({
   year,
 }: LedgerTableProps) {
   const hasGains = realizedGains.length > 0;
+  const netGain = hasGains ? summary.totalMeerwaarde - summary.totalVerlies : 0;
 
   return (
     <div className="rounded-lg border bg-card shadow-sm mb-6">
@@ -145,22 +146,15 @@ export function LedgerTable({
           {hasGains && (
             <tfoot>
               <tr className="border-t-2 border-gray-300 font-semibold text-sm">
-                <td colSpan={7} className="p-3 text-right">Total gain</td>
-                <td className={`p-3 text-right ${summary.totalMeerwaarde >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatEur(summary.totalMeerwaarde)}
-                </td>
-                <td className="p-3 text-right text-muted-foreground">-</td>
-              </tr>
-              <tr className="font-medium text-sm">
-                <td colSpan={7} className="p-3 text-right text-muted-foreground">Exemption</td>
+                <td colSpan={7} className="p-3 text-right">Total Gains</td>
                 <td className="p-3 text-right text-green-600">
-                  {formatEur(summary.vrijstellingGebruikt)}
+                  {formatEur(summary.totalMeerwaarde)}
                 </td>
                 <td className="p-3 text-right text-muted-foreground">-</td>
               </tr>
               {summary.totalVerlies > 0 && (
                 <tr className="font-medium text-sm">
-                  <td colSpan={7} className="p-3 text-right text-muted-foreground">Losses applied</td>
+                  <td colSpan={7} className="p-3 text-right text-muted-foreground">Total Losses</td>
                   <td className="p-3 text-right text-red-600">
                     {formatEur(-summary.totalVerlies)}
                   </td>
@@ -168,14 +162,30 @@ export function LedgerTable({
                 </tr>
               )}
               <tr className="border-t border-gray-200 font-semibold text-sm">
-                <td colSpan={7} className="p-3 text-right">Taxable gain</td>
+                <td colSpan={7} className="p-3 text-right">Net Gain</td>
+                <td className={`p-3 text-right font-medium ${netGain >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatEur(netGain)}
+                </td>
+                <td className="p-3 text-right text-muted-foreground">-</td>
+              </tr>
+              {summary.vrijstellingGebruikt > 0 && (
+                <tr className="font-medium text-sm">
+                  <td colSpan={7} className="p-3 text-right text-muted-foreground">Annual Exemption</td>
+                  <td className="p-3 text-right text-green-600">
+                    {formatEur(-summary.vrijstellingGebruikt)}
+                  </td>
+                  <td className="p-3 text-right text-muted-foreground">-</td>
+                </tr>
+              )}
+              <tr className="border-t border-gray-200 font-semibold text-sm">
+                <td colSpan={7} className="p-3 text-right">Taxable Gain</td>
                 <td className="p-3 text-right">{formatEur(summary.belastbareMeerwaarde)}</td>
                 <td className="p-3 text-right">-</td>
               </tr>
               <tr className="border-t-2 border-gray-300 font-bold text-sm bg-muted/20">
-                <td colSpan={7} className="p-3 text-right">Capital gains tax owed (10%)</td>
+                <td colSpan={7} className="p-3 text-right">Capital Gains Tax Owed (10%)</td>
                 <td className="p-3 text-right" />
-                <td className="p-3 text-right text-red-600 text-base">
+                <td className="p-3 text-right text-base">
                   {formatEur(summary.belastingVerschuldigd)}
                 </td>
               </tr>
