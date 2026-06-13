@@ -1,24 +1,13 @@
-import React from 'react';
 import { Download } from 'lucide-react';
 import type { RealizedGain, YearSummary } from '../utils/types';
+import { formatDate, formatEur } from '../utils/utils';
 
 interface LedgerTableProps {
   realizedGains: RealizedGain[];
   summary: YearSummary;
-  exemptionRemaining: number;
   year: number;
 }
 
-function formatEur(amount: number): string {
-  const sign = amount < 0 ? '-' : '';
-  return `${sign}€${Math.abs(amount).toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
 
 function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) {
   const header = 'Asset;Acquired;Original price;Snapshot price;Sell price;Sell date;Qty;Gain / Loss;Tax owed\n';
@@ -27,12 +16,12 @@ function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) 
     .map((g) => {
       const asterisk = g.hasSnapshotAvailable ? ' *' : '';
       const origPrice = g.originalUnitPriceEur != null ? g.originalUnitPriceEur.toFixed(2) : '-';
-      const fotoPrice = g.fotomomentUnitPriceEur != null ? g.fotomomentUnitPriceEur.toFixed(2) : '-';
+      const fotoPrice = g.snapshotUnitPriceEur != null ? g.snapshotUnitPriceEur.toFixed(2) : '-';
       return `${g.assetName} (${g.symbol});${formatDate(g.purchaseDate)}${asterisk};${origPrice};${fotoPrice};${g.sellUnitPriceEur.toFixed(2)};${formatDate(g.sellDate)};${g.quantity};${g.gainEur.toFixed(2)};${g.taxLiabilityEur.toFixed(2)}`;
     })
     .join('\n');
 
-  const summaryRows = `\n\nTotal Gains;;;;;;${summary.totalMeerwaarde.toFixed(2)};\nTotal Losses;;;;;;${(-summary.totalVerlies).toFixed(2)};\nNet Gain;;;;;;${(summary.totalMeerwaarde - summary.totalVerlies).toFixed(2)};\nAnnual Exemption;;;;;;${(-summary.vrijstellingGebruikt).toFixed(2)};\nTaxable Gain;;;;;;${summary.belastbareMeerwaarde.toFixed(2)};\nCapital Gains Tax Owed (10%);;;;;;${summary.belastingVerschuldigd.toFixed(2)};`;
+  const summaryRows = `\n\nTotal Gains;;;;;;${summary.totalGains.toFixed(2)};\nTotal Losses;;;;;;${(-summary.totalLosses).toFixed(2)};\nNet Gain;;;;;;${(summary.totalGains - summary.totalLosses).toFixed(2)};\nAnnual Exemption;;;;;;${(-summary.exemptionUsed).toFixed(2)};\nTaxable Gain;;;;;;${summary.taxableGain.toFixed(2)};\nCapital Gains Tax Owed (10%);;;;;;${summary.taxOwed.toFixed(2)};`;
 
   const blob = new Blob(['\uFEFF' + header + rows + summaryRows], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -46,11 +35,10 @@ function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) 
 export function LedgerTable({
   realizedGains,
   summary,
-  exemptionRemaining,
   year,
 }: LedgerTableProps) {
   const hasGains = realizedGains.length > 0;
-  const netGain = hasGains ? summary.totalMeerwaarde - summary.totalVerlies : 0;
+  const netGain = hasGains ? summary.totalGains - summary.totalLosses : 0;
 
   return (
     <div className="rounded-lg border bg-card shadow-sm mb-6">
@@ -99,8 +87,7 @@ export function LedgerTable({
             ) : (
               realizedGains.map((gain) => {
                 const isGain = gain.gainEur >= 0;
-                const hasFotomoment = gain.originalUnitPriceEur != null && gain.fotomomentUnitPriceEur != null;
-                const isOrigUsed = hasFotomoment && gain.originalUnitPriceEur! >= gain.fotomomentUnitPriceEur!;
+                const isOrigUsed = gain.hasSnapshotAvailable && gain.originalUnitPriceEur! >= gain.snapshotUnitPriceEur!;
                 return (
                   <tr key={gain.id} className="border-b last:border-b-0 hover:bg-muted/30">
                     <td className="p-3">
@@ -117,11 +104,11 @@ export function LedgerTable({
                     <td className="p-3 text-muted-foreground">
                       {formatDate(gain.purchaseDate)}
                     </td>
-                    <td className={`p-3 text-right ${hasFotomoment ? (isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
+                    <td className={`p-3 text-right ${gain.hasSnapshotAvailable ? (isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
                       {gain.originalUnitPriceEur != null ? formatEur(gain.originalUnitPriceEur) : '-'}
                     </td>
-                    <td className={`p-3 text-right ${hasFotomoment ? (!isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
-                      {gain.fotomomentUnitPriceEur != null ? formatEur(gain.fotomomentUnitPriceEur) : '-'}
+                    <td className={`p-3 text-right ${gain.hasSnapshotAvailable ? (!isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
+                      {gain.snapshotUnitPriceEur != null ? formatEur(gain.snapshotUnitPriceEur) : '-'}
                     </td>
                     <td className="p-3 text-right text-muted-foreground">
                       {formatEur(gain.sellUnitPriceEur)}
@@ -148,15 +135,15 @@ export function LedgerTable({
               <tr className="border-t-2 border-gray-300 font-semibold text-sm">
                 <td colSpan={7} className="p-3 text-right">Total Gains</td>
                 <td className="p-3 text-right text-green-600">
-                  {formatEur(summary.totalMeerwaarde)}
+                  {formatEur(summary.totalGains)}
                 </td>
                 <td className="p-3 text-right text-muted-foreground">-</td>
               </tr>
-              {summary.totalVerlies > 0 && (
+              {summary.totalLosses > 0 && (
                 <tr className="font-medium text-sm">
                   <td colSpan={7} className="p-3 text-right text-muted-foreground">Total Losses</td>
                   <td className="p-3 text-right text-red-600">
-                    {formatEur(-summary.totalVerlies)}
+                    {formatEur(-summary.totalLosses)}
                   </td>
                   <td className="p-3 text-right text-muted-foreground">-</td>
                 </tr>
@@ -168,25 +155,25 @@ export function LedgerTable({
                 </td>
                 <td className="p-3 text-right text-muted-foreground">-</td>
               </tr>
-              {summary.vrijstellingGebruikt > 0 && (
+              {summary.exemptionUsed > 0 && (
                 <tr className="font-medium text-sm">
                   <td colSpan={7} className="p-3 text-right text-muted-foreground">Annual Exemption</td>
                   <td className="p-3 text-right text-green-600">
-                    {formatEur(-summary.vrijstellingGebruikt)}
+                    {formatEur(-summary.exemptionUsed)}
                   </td>
                   <td className="p-3 text-right text-muted-foreground">-</td>
                 </tr>
               )}
               <tr className="border-t border-gray-200 font-semibold text-sm">
                 <td colSpan={7} className="p-3 text-right">Taxable Gain</td>
-                <td className="p-3 text-right">{formatEur(summary.belastbareMeerwaarde)}</td>
+                <td className="p-3 text-right">{formatEur(summary.taxableGain)}</td>
                 <td className="p-3 text-right">-</td>
               </tr>
               <tr className="border-t-2 border-gray-300 font-bold text-sm bg-muted/20">
                 <td colSpan={7} className="p-3 text-right">Capital Gains Tax Owed (10%)</td>
                 <td className="p-3 text-right" />
                 <td className="p-3 text-right text-base">
-                  {formatEur(summary.belastingVerschuldigd)}
+                  {formatEur(summary.taxOwed)}
                 </td>
               </tr>
             </tfoot>

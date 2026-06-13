@@ -1,19 +1,15 @@
-import React from 'react';
+import { formatEur } from "../utils/utils";
 
 interface SummaryCardsProps {
-  taxPayable: number;
+  taxOwed: number;
   taxableGain: number;
   exemptionRemaining: number;
   year: number;
 }
 
-function formatEur(amount: number): string {
-  const sign = amount < 0 ? '-' : '';
-  return `${sign}€${Math.abs(amount).toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 export function SummaryCards({
-  taxPayable,
+  taxOwed,
   taxableGain,
   exemptionRemaining,
   year,
@@ -25,7 +21,7 @@ export function SummaryCards({
           Capital gains tax owed for {year}
         </p>
         <p className="text-3xl font-bold text-red-600">
-          {formatEur(taxPayable)}
+          {formatEur(taxOwed)}
         </p>
         <p className="text-xs text-muted-foreground mt-2">
           10% on {formatEur(taxableGain)} taxable gain

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { AddonContext } from '@wealthfolio/addon-sdk';
 import { RefreshCw } from 'lucide-react';
 import { useTaxData } from '../hooks/useTaxData';
@@ -56,8 +56,8 @@ export function MeerwaardePage({ ctx }: MeerwaardePageProps) {
       ) : result ? (
         <>
           <SummaryCards
-            taxPayable={result.summary.belastingVerschuldigd}
-            taxableGain={result.summary.belastbareMeerwaarde}
+            taxOwed={result.summary.taxOwed}
+            taxableGain={result.summary.taxableGain}
             exemptionRemaining={result.exemptionRemaining}
             year={taxYear}
           />
@@ -65,7 +65,6 @@ export function MeerwaardePage({ ctx }: MeerwaardePageProps) {
           <LedgerTable
             realizedGains={result.realizedGains}
             summary={result.summary}
-            exemptionRemaining={result.exemptionRemaining}
             year={taxYear}
           />
         </>

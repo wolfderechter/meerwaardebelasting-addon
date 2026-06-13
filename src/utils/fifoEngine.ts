@@ -288,8 +288,6 @@ export function runFifoEngine(
       if (!accountNames[sell.accountId]) accountNames[sell.accountId] = sell.accountName;
       const sellYear = getYear(sell.date);
       const isCurrentYear = sellYear === taxYear;
-      const matchingLots = lots.filter((l) => l.symbol === sell.symbol && l.quantityRemaining > 0);
-      console.log(`[FIFO] account=${accountId}, date=${sell.date}, year=${sellYear}, isCurrentYear=${isCurrentYear}, symbol=${sell.symbol}, qty=${sell.quantity}, totalPrice=${sell.totalPrice}, matchingLots=${matchingLots.length}, totalLots=${lots.length}, totalBuys=${accountBuys.length}`);
 
       let remainingSellQty = sell.quantity;
       const proceedsEur = convertToEur(sell.totalPrice, sell.currency, rateMap, sell.date);
@@ -332,7 +330,7 @@ export function runFifoEngine(
             taxLiabilityEur: taxLiability,
             hasSnapshotAvailable: lot.hasSnapshotAvailable,
             originalUnitPriceEur: origPrice ?? undefined,
-            fotomomentUnitPriceEur: fotoPrice ?? undefined,
+            snapshotUnitPriceEur: fotoPrice ?? undefined,
             sellUnitPriceEur: sellUnitPrice,
           });
         }
@@ -365,35 +363,34 @@ export function runFifoEngine(
     }
   }
 
-  let totalMeerwaarde = 0;
-  let totalVerlies = 0;
+  let totalGains = 0;
+  let totalLosses = 0;
 
   for (const g of allRealizedGains) {
-    if (g.gainEur >= 0) totalMeerwaarde += g.gainEur;
-    else totalVerlies += Math.abs(g.gainEur);
+    if (g.gainEur >= 0) totalGains += g.gainEur;
+    else totalLosses += Math.abs(g.gainEur);
   }
 
-  const nettoMeerwaarde = Math.max(0, totalMeerwaarde - totalVerlies);
+  const netGains = Math.max(0, totalGains - totalLosses);
 
-  const vrijstellingGebruikt = Math.min(nettoMeerwaarde, ANNUAL_EXEMPTION);
-  const belastbareMeerwaarde = Math.max(0, nettoMeerwaarde - ANNUAL_EXEMPTION);
-  const belastingVerschuldigd = belastbareMeerwaarde * TAX_RATE;
+  const exemptionUsed = Math.min(netGains, ANNUAL_EXEMPTION);
+  const taxableGain = Math.max(0, netGains - ANNUAL_EXEMPTION);
+  const taxOwed = taxableGain * TAX_RATE;
 
   const summary: YearSummary = {
     year: taxYear,
-    totalMeerwaarde,
-    totalVerlies,
-    nettoMeerwaarde,
-    belastbareMeerwaarde,
-    vrijstellingGebruikt,
-    belastingVerschuldigd,
+    totalGains,
+    totalLosses,
+    taxableGain,
+    exemptionUsed,
+    taxOwed,
   };
 
   return {
     year: taxYear,
     realizedGains: allRealizedGains,
     summary,
-    exemptionRemaining: Math.max(0, ANNUAL_EXEMPTION - vrijstellingGebruikt),
+    exemptionRemaining: Math.max(0, ANNUAL_EXEMPTION - exemptionUsed),
     accountNames,
   };
 }

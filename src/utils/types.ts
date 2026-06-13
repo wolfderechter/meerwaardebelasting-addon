@@ -53,18 +53,17 @@ export interface RealizedGain {
   taxLiabilityEur: number;
   hasSnapshotAvailable: boolean;
   originalUnitPriceEur?: number;
-  fotomomentUnitPriceEur?: number;
+  snapshotUnitPriceEur?: number;
   sellUnitPriceEur: number;
 }
 
 export interface YearSummary {
   year: number;
-  totalMeerwaarde: number;
-  totalVerlies: number;
-  nettoMeerwaarde: number;
-  belastbareMeerwaarde: number;
-  vrijstellingGebruikt: number;
-  belastingVerschuldigd: number;
+  totalGains: number;
+  totalLosses: number;
+  taxableGain: number;
+  exemptionUsed: number;
+  taxOwed: number;
 }
 
 export interface FotomomentPrices {
