@@ -4,7 +4,7 @@ import { Icons } from '@wealthfolio/ui';
 import React from 'react';
 import { MeerwaardePage } from './pages/MeerwaardePage';
 
-function MeerwaardeWrapper({ ctx }: { ctx: AddonContext }) {
+function CapitalGainsWrapper({ ctx }: { ctx: AddonContext }) {
   const sharedQueryClient = ctx.api.query.getClient();
   return (
     <QueryClientProvider client={sharedQueryClient}>
@@ -14,7 +14,7 @@ function MeerwaardeWrapper({ ctx }: { ctx: AddonContext }) {
 }
 
 export default function enable(context: AddonContext) {
-  context.api.logger.info('Meerwaardebelasting addon wordt geladen...');
+  context.api.logger.info('Capital Gains addon loading...');
 
   const addedItems: { remove: () => void }[] = [];
 
@@ -28,30 +28,30 @@ export default function enable(context: AddonContext) {
     });
     addedItems.push(sidebarItem);
 
-    const MeerwaardeWrapperWithCtx = () => <MeerwaardeWrapper ctx={context} />;
+    const CapitalGainsWrapperWithCtx = () => <CapitalGainsWrapper ctx={context} />;
 
     context.router.add({
       path: '/addons/meerwaardebelasting',
       component: React.lazy(() =>
-        Promise.resolve({ default: MeerwaardeWrapperWithCtx }),
+        Promise.resolve({ default: CapitalGainsWrapperWithCtx }),
       ),
     });
 
-    context.api.logger.info('Meerwaardebelasting addon succesvol geladen');
+    context.api.logger.info('Capital Gains addon loaded successfully');
   } catch (error) {
-    context.api.logger.error('Fout bij initialiseren addon: ' + (error as Error).message);
+    context.api.logger.error('Error initializing addon: ' + (error as Error).message);
     throw error;
   }
 
   context.onDisable(() => {
-    context.api.logger.info('Meerwaardebelasting addon wordt uitgeschakeld...');
+    context.api.logger.info('Capital Gains addon disabling...');
     addedItems.forEach((item) => {
       try {
         item.remove();
       } catch (error) {
-        context.api.logger.error('Fout bij verwijderen sidebar item: ' + (error as Error).message);
+        context.api.logger.error('Error removing sidebar item: ' + (error as Error).message);
       }
     });
-    context.api.logger.info('Meerwaardebelasting addon uitgeschakeld');
+    context.api.logger.info('Capital Gains addon disabled');
   });
 }

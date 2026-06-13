@@ -84,5 +84,4 @@ export interface TaxDataState {
   loading: boolean;
   error: string | null;
   result: TaxCalculationResult | null;
-  refetch: () => void;
 }

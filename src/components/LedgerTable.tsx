@@ -21,7 +21,7 @@ function formatDate(dateStr: string): string {
 }
 
 function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) {
-  const header = 'Belegging;Aankoopdatum;Originele prijs;Fotomoment prijs;Verkoopprijs;Verkoopdatum;Aantal;Meerwaarde;Belasting\n';
+  const header = 'Investment;Purchase date;Original price;Snapshot price;Sell price;Sell date;Quantity;Gain;Tax\n';
   const rows = gains
     .filter((g) => g.gainEur !== 0)
     .map((g) => {
@@ -32,13 +32,13 @@ function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) 
     })
     .join('\n');
 
-  const summaryRows = `\n\nTotale meerwaarde;;;;;;${summary.totalMeerwaarde.toFixed(2)};\nVrijstelling;;;;;;${summary.vrijstellingGebruikt.toFixed(2)};\nBelastbare meerwaarde;;;;;;${summary.belastbareMeerwaarde.toFixed(2)};\nTe betalen belasting (10%);;;;;;${summary.belastingVerschuldigd.toFixed(2)};`;
+  const summaryRows = `\n\nTotal gain;;;;;;${summary.totalMeerwaarde.toFixed(2)};\nExemption;;;;;;${summary.vrijstellingGebruikt.toFixed(2)};\nTaxable gain;;;;;;${summary.belastbareMeerwaarde.toFixed(2)};\nTax payable (10%);;;;;;${summary.belastingVerschuldigd.toFixed(2)};`;
 
   const blob = new Blob(['\uFEFF' + header + rows + summaryRows], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `meerwaardebelasting-${year}.csv`;
+  a.download = `capital-gains-${year}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -55,9 +55,9 @@ export function LedgerTable({
     <div className="rounded-lg border bg-card shadow-sm mb-6">
       <div className="flex items-center justify-between p-4 border-b">
         <div>
-          <h2 className="text-lg font-semibold">Verkochte beleggingen</h2>
+          <h2 className="text-lg font-semibold">Sold investments</h2>
           <p className="text-sm text-muted-foreground">
-            Gerealiseerde meerwaarden in belastingjaar {year}
+            Realized gains in tax year {year}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -92,7 +92,7 @@ export function LedgerTable({
             {!hasGains ? (
               <tr>
                 <td colSpan={9} className="p-8 text-center text-muted-foreground">
-                  Geen gerealiseerde meerwaarden in {year}.
+                  No realized gains in {year}.
                 </td>
               </tr>
             ) : (
@@ -135,7 +135,7 @@ export function LedgerTable({
                     <td className={`p-3 text-right font-medium ${isGain ? 'text-green-600' : 'text-red-600'}`}>
                       {formatEur(gain.gainEur)}
                       {gain.fotomomentAdjusted && (
-                        <span className="ml-1 text-xs text-blue-500" title="Originele prijs was hoger, gebruikt voor berekening">†</span>
+                        <span className="ml-1 text-xs text-blue-500" title="Original price was higher, used for calculation">†</span>
                       )}
                     </td>
                     <td className={`p-3 text-right ${isGain ? 'text-red-600' : 'text-muted-foreground'}`}>
@@ -149,14 +149,14 @@ export function LedgerTable({
           {hasGains && (
             <tfoot>
               <tr className="border-t-2 border-gray-300 font-semibold text-sm">
-                <td colSpan={7} className="p-3 text-right">Totale meerwaarde</td>
+                <td colSpan={7} className="p-3 text-right">Total gain</td>
                 <td className={`p-3 text-right ${summary.totalMeerwaarde >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatEur(summary.totalMeerwaarde)}
                 </td>
                 <td className="p-3 text-right text-muted-foreground">-</td>
               </tr>
               <tr className="font-medium text-sm">
-                <td colSpan={7} className="p-3 text-right text-muted-foreground">Vrijstelling</td>
+                <td colSpan={7} className="p-3 text-right text-muted-foreground">Exemption</td>
                 <td className="p-3 text-right text-green-600">
                   {formatEur(summary.vrijstellingGebruikt)}
                 </td>
@@ -164,7 +164,7 @@ export function LedgerTable({
               </tr>
               {summary.totalVerlies > 0 && (
                 <tr className="font-medium text-sm">
-                  <td colSpan={7} className="p-3 text-right text-muted-foreground">Aangerekende verliezen</td>
+                  <td colSpan={7} className="p-3 text-right text-muted-foreground">Losses applied</td>
                   <td className="p-3 text-right text-red-600">
                     {formatEur(-summary.totalVerlies)}
                   </td>
@@ -172,12 +172,12 @@ export function LedgerTable({
                 </tr>
               )}
               <tr className="border-t border-gray-200 font-semibold text-sm">
-                <td colSpan={7} className="p-3 text-right">Belastbare meerwaarde</td>
+                <td colSpan={7} className="p-3 text-right">Taxable gain</td>
                 <td className="p-3 text-right">{formatEur(summary.belastbareMeerwaarde)}</td>
                 <td className="p-3 text-right">-</td>
               </tr>
               <tr className="border-t-2 border-gray-300 font-bold text-sm bg-muted/20">
-                <td colSpan={7} className="p-3 text-right">Te betalen meerwaardebelasting (10%)</td>
+                <td colSpan={7} className="p-3 text-right">Capital gains tax payable (10%)</td>
                 <td className="p-3 text-right" />
                 <td className="p-3 text-right text-red-600 text-base">
                   {formatEur(summary.belastingVerschuldigd)}

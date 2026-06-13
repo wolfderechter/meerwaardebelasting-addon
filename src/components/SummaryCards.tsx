@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface SummaryCardsProps {
-  belastingVerschuldigd: number;
-  belastbareMeerwaarde: number;
+  taxPayable: number;
+  taxableGain: number;
   exemptionRemaining: number;
   year: number;
 }
@@ -13,8 +13,8 @@ function formatEur(amount: number): string {
 }
 
 export function SummaryCards({
-  belastingVerschuldigd,
-  belastbareMeerwaarde,
+  taxPayable,
+  taxableGain,
   exemptionRemaining,
   year,
 }: SummaryCardsProps) {
@@ -22,25 +22,25 @@ export function SummaryCards({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
       <div className="rounded-lg border bg-card p-6 shadow-sm">
         <p className="text-sm font-medium text-muted-foreground mb-1">
-          Te betalen meerwaardebelasting in {year}
+          Capital gains tax payable in {year}
         </p>
         <p className="text-3xl font-bold text-red-600">
-          {formatEur(belastingVerschuldigd)}
+          {formatEur(taxPayable)}
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          10% op {formatEur(belastbareMeerwaarde)} belastbare meerwaarde
+          10% on {formatEur(taxableGain)} taxable gain
         </p>
       </div>
 
       <div className="rounded-lg border bg-card p-6 shadow-sm">
         <p className="text-sm font-medium text-muted-foreground mb-1">
-          Resterende vrijstelling
+          Remaining exemption
         </p>
         <p className="text-3xl font-bold text-green-600">
           {formatEur(exemptionRemaining)}
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          Totale vrijstelling {year}: €10.000
+          Total exemption {year}: €10,000
         </p>
       </div>
     </div>
