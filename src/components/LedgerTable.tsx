@@ -25,7 +25,7 @@ function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) 
   const rows = gains
     .filter((g) => g.gainEur !== 0)
     .map((g) => {
-      const asterisk = g.usesFotomoment ? ' *' : '';
+      const asterisk = g.hasSnapshotAvailable ? ' *' : '';
       const origPrice = g.originalUnitPriceEur != null ? g.originalUnitPriceEur.toFixed(2) : '-';
       const fotoPrice = g.fotomomentUnitPriceEur != null ? g.fotomomentUnitPriceEur.toFixed(2) : '-';
       return `${g.assetName} (${g.symbol});${formatDate(g.purchaseDate)}${asterisk};${origPrice};${fotoPrice};${g.sellUnitPriceEur.toFixed(2)};${formatDate(g.sellDate)};${g.quantity};${g.gainEur.toFixed(2)};${g.taxLiabilityEur.toFixed(2)}`;
@@ -133,9 +133,6 @@ export function LedgerTable({
                     </td>
                     <td className={`p-3 text-right font-medium ${isGain ? 'text-green-600' : gain.gainEur < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
                       {formatEur(gain.gainEur)}
-                      {gain.fotomomentAdjusted && (
-                        <span className="ml-1 text-xs text-blue-500" title="Original price was higher, used for calculation">†</span>
-                      )}
                     </td>
                     <td className={`p-3 text-right ${isGain ? 'text-red-600' : 'text-muted-foreground'}`}>
                       {formatEur(gain.taxLiabilityEur)}

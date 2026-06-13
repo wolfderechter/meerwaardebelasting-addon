@@ -31,7 +31,7 @@ export interface TaxLot {
   quantityRemaining: number;
   unitCostEur: number;
   totalCostEur: number;
-  usesFotomoment: boolean;
+  hasSnapshotAvailable: boolean;
   originalUnitCostEur?: number;
   fotomomentPriceEur?: number;
 }
@@ -51,8 +51,7 @@ export interface RealizedGain {
   gainEur: number;
   taxableGainEur: number;
   taxLiabilityEur: number;
-  usesFotomoment: boolean;
-  fotomomentAdjusted: boolean;
+  hasSnapshotAvailable: boolean;
   originalUnitPriceEur?: number;
   fotomomentUnitPriceEur?: number;
   sellUnitPriceEur: number;

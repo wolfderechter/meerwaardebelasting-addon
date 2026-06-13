@@ -21,10 +21,6 @@ function getYear(dateStr: string): number {
   return new Date(dateStr).getFullYear();
 }
 
-function isPreFotomoment(dateStr: string): boolean {
-  return parseDate(dateStr) < parseDate(FOTOMOMENT_DATE);
-}
-
 export function unwrapArray(raw: unknown): any[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
@@ -199,18 +195,6 @@ function convertToEur(
   return amount * rate;
 }
 
-function computeGainFotomoment(
-  proceedsEur: number,
-  fotomomentCostEur: number,
-  originalCostEur: number
-): { costBasisEur: number; gainEur: number; adjusted: boolean } {
-  const higher = Math.max(fotomomentCostEur, originalCostEur);
-  const costBasisEur = Math.min(higher, proceedsEur);
-  const adjusted = higher !== fotomomentCostEur;
-  const gainEur = proceedsEur - costBasisEur;
-  return { costBasisEur, gainEur, adjusted };
-}
-
 export function runFifoEngine(
   activities: NormalizedActivity[],
   rateMap: Map<string, Map<string, Map<string, number>>>,
@@ -232,7 +216,7 @@ export function runFifoEngine(
     rateMap: Map<string, Map<string, Map<string, number>>>,
     fotomomentPrices: FotomomentPrices
   ): TaxLot {
-    const isPre2026 = isPreFotomoment(buy.date);
+    const isPre2026 = parseDate(buy.date) < parseDate(FOTOMOMENT_DATE);
 
     const rawTotalCost = buy.totalPrice || (buy.quantity * buy.unitPrice);
     const totalEur = convertToEur(rawTotalCost, buy.currency, rateMap, buy.date);
@@ -255,7 +239,7 @@ export function runFifoEngine(
         quantityRemaining: buy.quantity,
         unitCostEur: fotomomentPriceEur,
         totalCostEur: fotomomentPriceEur * buy.quantity,
-        usesFotomoment: true,
+        hasSnapshotAvailable: true,
         originalUnitCostEur: rawUnitPriceEur,
         fotomomentPriceEur,
       };
@@ -272,7 +256,7 @@ export function runFifoEngine(
       quantityRemaining: buy.quantity,
       unitCostEur: unitCost,
       totalCostEur: totalEur,
-      usesFotomoment: false,
+      hasSnapshotAvailable: false,
       originalUnitCostEur: rawUnitPriceEur,
       fotomomentPriceEur: undefined,
     };
@@ -320,11 +304,9 @@ export function runFifoEngine(
         const matchProceeds = sellUnitPrice * matchQty;
         const fotomomentCost = lot.unitCostEur * matchQty;
         const originalCost = (lot.originalUnitCostEur ?? lot.unitCostEur) * matchQty;
-        const { costBasisEur, gainEur, adjusted } = computeGainFotomoment(
-          matchProceeds,
-          fotomomentCost,
-          originalCost
-        );
+        const costBasisEur = lot.hasSnapshotAvailable
+          ? Math.max(fotomomentCost, originalCost)
+          : originalCost;
 
         const gain = matchProceeds - costBasisEur;
         const taxLiability = gain > 0 ? gain * TAX_RATE : 0;
@@ -348,8 +330,7 @@ export function runFifoEngine(
             gainEur: gain,
             taxableGainEur: gain > 0 ? gain : 0,
             taxLiabilityEur: taxLiability,
-            usesFotomoment: lot.usesFotomoment,
-            fotomomentAdjusted: adjusted,
+            hasSnapshotAvailable: lot.hasSnapshotAvailable,
             originalUnitPriceEur: origPrice ?? undefined,
             fotomomentUnitPriceEur: fotoPrice ?? undefined,
             sellUnitPriceEur: sellUnitPrice,
@@ -377,8 +358,7 @@ export function runFifoEngine(
           gainEur: uncoveredProceeds,
           taxableGainEur: uncoveredProceeds,
           taxLiabilityEur: uncoveredProceeds * TAX_RATE,
-          usesFotomoment: false,
-          fotomomentAdjusted: false,
+          hasSnapshotAvailable: false,
           sellUnitPriceEur: sellUnitPrice,
         });
       }
