@@ -21,7 +21,7 @@ function formatDate(dateStr: string): string {
 }
 
 function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) {
-  const header = 'Asset;Acquired;Original price;Snapshot price;Sell price;Sold;Qty;Gain / Loss;Tax owed\n';
+  const header = 'Asset;Acquired;Original price;Snapshot price;Sell price;Sell date;Qty;Gain / Loss;Tax owed\n';
   const rows = gains
     .filter((g) => g.gainEur !== 0)
     .map((g) => {
@@ -82,7 +82,7 @@ export function LedgerTable({
               <th className="text-right font-medium p-3">Original price</th>
               <th className="text-right font-medium p-3">Snapshot price</th>
               <th className="text-right font-medium p-3">Sell price</th>
-              <th className="text-left font-medium p-3">Sold</th>
+              <th className="text-left font-medium p-3">Sell date</th>
               <th className="text-right font-medium p-3">Qty</th>
               <th className="text-right font-medium p-3">Gain / Loss</th>
               <th className="text-right font-medium p-3">Tax owed</th>
@@ -103,35 +103,35 @@ export function LedgerTable({
                 return (
                   <tr key={gain.id} className="border-b last:border-b-0 hover:bg-muted/30">
                     <td className="p-3">
-                      <div className="font-medium truncate max-w-[200px]">
-                        {gain.assetName}
+                      <div className="font-medium truncate max-w-[280px]">
+                        {gain.symbol}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {gain.symbol}
+                        {gain.assetName}
                         {gain.accountName && (
                           <span className="ml-1 opacity-60">· {gain.accountName}</span>
                         )}
                       </div>
                     </td>
-                    <td className="p-3 text-muted-foreground text-xs">
+                    <td className="p-3 text-muted-foreground">
                       {formatDate(gain.purchaseDate)}
                     </td>
-                    <td className={`p-3 text-right text-xs ${hasFotomoment ? (isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
+                    <td className={`p-3 text-right ${hasFotomoment ? (isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
                       {gain.originalUnitPriceEur != null ? formatEur(gain.originalUnitPriceEur) : '-'}
                     </td>
-                    <td className={`p-3 text-right text-xs ${hasFotomoment ? (!isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
+                    <td className={`p-3 text-right ${hasFotomoment ? (!isOrigUsed ? 'font-semibold text-foreground' : 'text-muted-foreground/50') : 'text-muted-foreground'}`}>
                       {gain.fotomomentUnitPriceEur != null ? formatEur(gain.fotomomentUnitPriceEur) : '-'}
                     </td>
-                    <td className="p-3 text-right text-xs text-muted-foreground">
+                    <td className="p-3 text-right text-muted-foreground">
                       {formatEur(gain.sellUnitPriceEur)}
                     </td>
-                    <td className="p-3 text-muted-foreground text-xs">
+                    <td className="p-3 text-muted-foreground">
                       {formatDate(gain.sellDate)}
                     </td>
                     <td className="p-3 text-right font-medium">
                       {gain.quantity.toLocaleString('nl-BE', { maximumFractionDigits: 4 })}
                     </td>
-                    <td className={`p-3 text-right font-medium ${isGain ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`p-3 text-right font-medium ${isGain ? 'text-green-600' : gain.gainEur < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
                       {formatEur(gain.gainEur)}
                       {gain.fotomomentAdjusted && (
                         <span className="ml-1 text-xs text-blue-500" title="Original price was higher, used for calculation">†</span>
