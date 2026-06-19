@@ -1,7 +1,7 @@
 {
   "id": "meerwaardebelasting-addon",
   "name": "Meerwaardebelasting",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "A wealthfolio addon to track the meerwaardebelasting for Belgium",
   "author": "wolfderechter",
   "license": "MIT",
