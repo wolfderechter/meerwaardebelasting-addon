@@ -17,17 +17,17 @@ function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) 
       const asterisk = g.hasSnapshotAvailable ? ' *' : '';
       const origPrice = g.originalUnitPriceEur != null ? g.originalUnitPriceEur.toFixed(2) : '-';
       const fotoPrice = g.snapshotUnitPriceEur != null ? g.snapshotUnitPriceEur.toFixed(2) : '-';
-      return `${g.assetName} (${g.symbol});${formatDate(g.purchaseDate)}${asterisk};${origPrice};${fotoPrice};${g.sellUnitPriceEur.toFixed(2)};${formatDate(g.sellDate)};${g.quantity};${g.gainEur.toFixed(2)};${g.taxLiabilityEur.toFixed(2)}`;
+      return `"${g.assetName.replace(/"/g, '""')} (${g.symbol})";${formatDate(g.purchaseDate)}${asterisk};${origPrice};${fotoPrice};${g.sellUnitPriceEur.toFixed(2)};${formatDate(g.sellDate)};${g.quantity};${g.gainEur.toFixed(2)};${g.taxLiabilityEur.toFixed(2)}`;
     })
     .join('\n');
 
-  const summaryRows = `\n\nTotal Gains;;;;;;${summary.totalGains.toFixed(2)};\nTotal Losses;;;;;;${(-summary.totalLosses).toFixed(2)};\nNet Gain;;;;;;${(summary.totalGains - summary.totalLosses).toFixed(2)};\nAnnual Exemption;;;;;;${(-summary.exemptionUsed).toFixed(2)};\nTaxable Gain;;;;;;${summary.taxableGain.toFixed(2)};\nCapital Gains Tax Owed (10%);;;;;;${summary.taxOwed.toFixed(2)};`;
+  const summaryRows = `\n\nTotal Gains;;;;;;;${summary.totalGains.toFixed(2)};\nTotal Losses;;;;;;;${(-summary.totalLosses).toFixed(2)};\nNet Gain;;;;;;;${(summary.totalGains - summary.totalLosses).toFixed(2)};\nAnnual Exemption;;;;;;;${(-summary.exemptionUsed).toFixed(2)};\nTaxable Gain;;;;;;;${summary.taxableGain.toFixed(2)};\nCapital Gains Tax Owed (10%);;;;;;;${summary.taxOwed.toFixed(2)};`;
 
   const blob = new Blob(['\uFEFF' + header + rows + summaryRows], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `capital-gains-${year}.csv`;
+  a.download = `meerwaardebelasting-${year}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
