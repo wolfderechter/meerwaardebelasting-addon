@@ -1,15 +1,17 @@
 import { Download } from 'lucide-react';
 import type { RealizedGain, YearSummary } from '../utils/types';
 import { formatDate, formatEur } from '../utils/utils';
+import type { AddonContext } from '@wealthfolio/addon-sdk';
 
 interface LedgerTableProps {
   realizedGains: RealizedGain[];
   summary: YearSummary;
   year: number;
+  ctx: AddonContext;
 }
 
 
-function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) {
+function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary, ctx: AddonContext | null) {
   const header = 'Asset;Acquired;Original price;Snapshot price;Sell price;Sell date;Qty;Gain / Loss;Tax owed\n';
   const rows = gains
     .filter((g) => g.gainEur !== 0)
@@ -22,20 +24,27 @@ function downloadCsv(gains: RealizedGain[], year: number, summary: YearSummary) 
     .join('\n');
 
   const summaryRows = `\n\nTotal Gains;;;;;;;${summary.totalGains.toFixed(2)};\nTotal Losses;;;;;;;${(-summary.totalLosses).toFixed(2)};\nNet Gain;;;;;;;${(summary.totalGains - summary.totalLosses).toFixed(2)};\nAnnual Exemption;;;;;;;${(-summary.exemptionUsed).toFixed(2)};\nTaxable Gain;;;;;;;${summary.taxableGain.toFixed(2)};\nCapital Gains Tax Owed (10%);;;;;;;${summary.taxOwed.toFixed(2)};`;
-
-  const blob = new Blob(['\uFEFF' + header + rows + summaryRows], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `meerwaardebelasting-${year}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const fileContent = new Blob(['\uFEFF' + header + rows + summaryRows], { type: 'text/csv;charset=utf-8;' });
+  if (ctx) {
+    ctx?.api.files.openSaveDialog(
+      fileContent,
+      `meerwaardebelasting-${year}.csv`
+    );
+  } else {
+    const url = URL.createObjectURL(fileContent);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `meerwaardebelasting-${year}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function LedgerTable({
   realizedGains,
   summary,
   year,
+  ctx
 }: LedgerTableProps) {
   const hasGains = realizedGains.length > 0;
   const netGain = hasGains ? summary.totalGains - summary.totalLosses : 0;
@@ -52,7 +61,7 @@ export function LedgerTable({
         <div className="flex items-center gap-2">
           {hasGains && (
             <button
-              onClick={() => downloadCsv(realizedGains, year, summary)}
+              onClick={() => downloadCsv(realizedGains, year, summary, ctx)}
               className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
             >
               <Download className="h-4 w-4" />

@@ -63,6 +63,7 @@ export function MeerwaardePage({ ctx }: MeerwaardePageProps) {
           />
 
           <LedgerTable
+            ctx={ctx}
             realizedGains={result.realizedGains}
             summary={result.summary}
             year={taxYear}
